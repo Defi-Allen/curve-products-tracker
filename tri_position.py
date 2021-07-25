@@ -15,7 +15,7 @@ from src.utils.network_utils import connect
 
 ALCHEMY_URL = f"https://eth-mainnet.alchemyapi.io/v2/{os.environ['ALCHEMY_API_KEY']}"
 ETH_ADDRESS = os.environ.get("ETH_ADDRESS", "0x989aeb4d175e16225e39e87d0d97a3360524ad80")
-BLOCK_STEPS = os.environ.get("BLOCK_STEPS", 100)
+BLOCK_STEPS = int(os.environ.get("BLOCK_STEPS", 100))
 
 
 def main():
