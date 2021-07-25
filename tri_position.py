@@ -1,4 +1,5 @@
 import argparse
+import os
 
 from brownie import multicall
 from brownie import web3
@@ -12,49 +13,21 @@ from src.core.products_factory import TRICRYPTO_V2
 from src.utils.network_utils import connect
 
 
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Get TriCrypto positions and deposit info for address."
-    )
-    parser.add_argument(
-        "--address",
-        dest="address",
-        help="Address to fetch info for.",
-        type=str,
-    )
-    parser.add_argument(
-        "--node-provider-https",
-        dest="node_provider_https",
-        help="Node provider API. It must have Archive Node access (Alchemy). "
-        "Go to: https://alchemy.com/?r=0f41076514343f84 to get $100 of "
-        "credits. They also have a free tier with archival node access. "
-        "After you make an account, you can fetch your api key and enter "
-        "it in this parameter, "
-        "e.g. https://eth-mainnet.alchemyapi.io/v2/API_KEY",
-        type=str,
-    )
-    parser.add_argument(
-        "--block-steps",
-        dest="block_steps",
-        help="How many blocks to skip between each query",
-        type=int,
-        default=100,
-    )
-    return parser.parse_args()
+ALCHEMY_URL = f"https://eth-mainnet.alchemyapi.io/v2/{os.environ['ALCHEMY_API_KEY']}"
+ETH_ADDRESS = os.environ.get("ETH_ADDRESS", "0x989aeb4d175e16225e39e87d0d97a3360524ad80")
+BLOCK_STEPS = os.environ.get("BLOCK_STEPS", 100)
 
 
 def main():
-    args = parse_args()
-
     # connect to custom note provider in args
-    connect(args.node_provider_https)
+    connect(ALCHEMY_URL)
 
     # initialise tricrypto calculator
     tricrypto_calculator = CurvePositionCalculator(TRICRYPTO_V2)
 
     # get address's first transaction:
     added_liquidity_txes = get_mint_txes(
-        user_address=args.address,
+        user_address=ETH_ADDRESS,
         token_addr=TRICRYPTO_V2.token_contracts["crv3crypto"].addr,
         from_block=TRICRYPTO_V2.contract.genesis_block,
     )
@@ -65,7 +38,7 @@ def main():
     latest_block = web3.eth.block_number
 
     block_start = int(added_liquidity_txes[0]["blockNum"], 16)
-    query_blocks = list(range(block_start, latest_block + 1, args.block_steps))
+    query_blocks = list(range(block_start, latest_block + 1, BLOCK_STEPS))
     if latest_block not in query_blocks:
         query_blocks.append(latest_block)
 
@@ -81,7 +54,7 @@ def main():
     ]
     position_data = DataFrame(index=query_blocks, columns=columns)
 
-    print(f"User Address: {args.address}")
+    print(f"User Address: {ETH_ADDRESS}")
     print("Fetching all deposits to Curve v2 TriCrypto pool.")
 
     for idx, _ in position_data.iterrows():
@@ -91,7 +64,7 @@ def main():
         try:
 
             block_position = tricrypto_calculator.get_position(
-                args.address, block_number=idx
+                ETH_ADDRESS, block_number=idx
             )
             position_data = shove_data(block_position, position_data, idx)
 
@@ -102,7 +75,7 @@ def main():
 
     position_data.dropna(inplace=True)
     position_data.set_index("time", inplace=True)
-    position_data.to_csv(f"./{args.address}.csv")
+    position_data.to_csv(f"./{ETH_ADDRESS}.csv")
 
     # disconnect
     disconnect()
