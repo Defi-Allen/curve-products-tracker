@@ -52,6 +52,8 @@ TRICRYPTO_V2 = Product(
     },
 )
 
+TRICRYPTO_V2_POOL = TRICRYPTO_V2
+
 cvxCRV_STAKING = Product(
     name="cvxCRV Staking",
     contract=ContractInfo(
